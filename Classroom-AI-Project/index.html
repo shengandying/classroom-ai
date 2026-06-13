@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>林晟课堂 AI 情感状态时序回放系统 (升级版)</title>
+<style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f8f9fa; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+    .control-panel { background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); width: 100%; max-width: 800px; margin-bottom: 20px; box-sizing: border-box; }
+    .upload-btn { margin-bottom: 15px; }
+    .slider-box { display: flex; align-items: center; gap: 15px; width: 100%; margin-top: 10px; }
+    .slider-box input[type="range"] { flex: 1; cursor: pointer; }
+    .time-display { font-size: 16px; font-weight: bold; color: #1b365d; min-width: 160px; }
+    
+    .heatmap-box { background: #fff; padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: center; width: 100%; max-width: 800px; box-sizing: border-box;}
+    .title { font-size: 22px; font-weight: bold; color: #1b365d; margin-bottom: 5px; }
+    .subtitle { font-size: 14px; color: #666; margin-bottom: 20px; font-style: italic; }
+    
+    .grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; background: #eee; border: 1px solid #ddd; padding: 5px; border-radius: 6px; }
+    .cell { aspect-ratio: 1.2; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 12px; color: #000; font-weight: bold; border-radius: 4px; transition: all 0.3s ease; }
+    .cell .status-txt { font-size: 11px; font-weight: normal; margin-top: 2px; }
+
+    /* 色阶 */
+    .c0 { background: #fff5f0; } .c1 { background: #fee0d2; } .c2 { background: #fcbba1; }
+    .c3 { background: #fc9272; } .c4 { background: #fb6a4a; color: white;} .c5 { background: #ef3b2c; color: white;}
+    .c6 { background: #cb181d; color: white;} .c7 { background: #a50f15; color: white;} .c8 { background: #67000d; color: white;}
+    .missing { background: #e0e0e0; color: #999; font-weight: normal; }
+</style>
+</head>
+<body>
+
+<div class="control-panel">
+    <div class="title" style="font-size: 18px; margin-bottom: 10px;">🎛️ 系统控制台 (已启用 Excel 兼容模式)</div>
+    <div class="upload-btn">
+        <label style="font-weight: 500;">第一步：导入课堂日志 (CSV格式)：</label>
+        <input type="file" id="csvFileInput" accept=".csv">
+    </div>
+    <div class="slider-box">
+        <label style="font-weight: 500;">第二步：拖动时间轴回放：</label>
+        <input type="range" id="timeSlider" min="0" max="0" value="0" disabled>
+        <div class="time-display" id="timeLabel">请先导入数据...</div>
+    </div>
+</div>
+
+<div class="heatmap-box">
+    <div class="title">📊 林盛课堂情感全景动态热力图</div>
+    <div class="subtitle">基于 GCN 空间拓扑与计算机视觉的多模态实时动态快照</div>
+    <div class="grid" id="heatmapGrid"></div>
+</div>
+
+<script>
+    let timelineData = {}; 
+    let sortedTimestamps = []; 
+    const totalStudentsCount = 30; 
+
+    window.onload = function() { renderEmptyGrid(); };
+
+    function renderEmptyGrid() {
+        const grid = document.getElementById("heatmapGrid");
+        grid.innerHTML = "";
+        for (let i = 1; i <= totalStudentsCount; i++) {
+            const studentId = `学生_${String(i).padStart(2, '0')}`;
+            const cell = document.createElement("div");
+            cell.className = "cell missing";
+            cell.innerHTML = `<div>${studentId}</div><div class="status-txt">无信号</div>`;
+            grid.appendChild(cell);
+        }
+    }
+
+    document.getElementById('csvFileInput').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(evt) { parseCSVData(evt.target.result); };
+        
+        // 🚀 【核心修复 1】强制使用 GBK 编码读取，完美兼容 Excel 默认导出的 CSV 乱码问题
+        reader.readAsText(file, 'GBK'); 
+    });
+
+    function parseCSVData(csvText) {
+        timelineData = {};
+        const lines = csvText.split('\n');
+        
+        let validLinesCount = 0;
+
+        for (let i = 1; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (!line) continue;
+            
+            // 🚀 【核心修复 2】清洗掉 Excel 可能会自动加上的所有双引号，并兼容分号分隔符
+            const cleanLine = line.replace(/"/g, ''); 
+            const parts = cleanLine.includes(';') ? cleanLine.split(';') : cleanLine.split(',');
+            
+            if (parts.length < 3) continue;
+            
+            const timestamp = parts[0].trim();
+            const studentId = parts[1].trim();
+            const emotion = parts[2].trim();
+            
+            // 过滤表头杂质
+            if(timestamp === "时间" || studentId === "学号") continue;
+
+            if (!timelineData[timestamp]) {
+                timelineData[timestamp] = {};
+            }
+            timelineData[timestamp][studentId] = emotion;
+            validLinesCount++;
+        }
+
+        sortedTimestamps = Object.keys(timelineData).sort();
+        
+        if (sortedTimestamps.length === 0 || validLinesCount === 0) {
+            alert("⚠️ 未能识别有效的数据！\n温馨提示：请确保您在 Excel 中另存为 CSV 时，当前正处于【原始日志明细】这张分表上！");
+            return;
+        }
+
+        const slider = document.getElementById("timeSlider");
+        slider.disabled = false;
+        slider.min = 0;
+        slider.max = sortedTimestamps.length - 1;
+        slider.value = 0;
+
+        slider.oninput = function() { updateHeatmap(this.value); };
+        updateHeatmap(0);
+    }
+
+    function updateHeatmap(index) {
+        const timestamp = sortedTimestamps[index];
+        document.getElementById("timeLabel").innerText = timestamp;
+        
+        const currentFrameData = timelineData[timestamp] || {};
+        const grid = document.getElementById("heatmapGrid");
+        grid.innerHTML = ""; 
+
+        for (let i = 1; i <= totalStudentsCount; i++) {
+            const studentId = `学生_${String(i).padStart(2, '0')}`;
+            const emotion = currentFrameData[studentId]; 
+            const cell = document.createElement("div");
+            
+            if (emotion) {
+                let colorClass = "missing";
+                let displayText = emotion;
+
+                // 模糊匹配，防止前后有看不见的空格
+                if (emotion.includes("1专注")) colorClass = "c1";
+                else if (emotion.includes("4无聊")) colorClass = "c3";
+                else if (emotion.includes("2困惑")) colorClass = "c6";
+                else if (emotion.includes("3沮丧")) colorClass = "c8";
+                else if (emotion.includes("未检测到人脸")) {
+                    colorClass = "missing";
+                    displayText = "离开";
+                }
+
+                cell.className = `cell ${colorClass}`;
+                cell.innerHTML = `<div>${studentId}</div><div class="status-txt">${displayText}</div>`;
+            } else {
+                cell.className = "cell missing";
+                cell.innerHTML = `<div>${studentId}</div><div class="status-txt">缺席</div>`;
+            }
+            grid.appendChild(cell);
+        }
+    }
+</script>
+
+</body>
+</html>
