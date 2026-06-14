@@ -2,9 +2,15 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<title>课堂 AI 情感状态时序回放系统 (自动部署版)</title>
+<title>基于CNN的教育专属情感分析与建模</title>
 <style>
-    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f8f9fa; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f8f9fa; display: flex; flex-direction: column; align-items: center; padding: 20px; margin: 0; }
+    
+    /* 新增的顶部横幅样式 */
+    .main-header { background: #1b365d; padding: 25px 20px; border-radius: 12px; box-shadow: 0 6px 15px rgba(0,0,0,0.1); width: 100%; max-width: 800px; margin-bottom: 20px; box-sizing: border-box; text-align: center; color: #fff; margin-top: 10px; }
+    .main-header h1 { margin: 0; font-size: 28px; font-weight: bold; letter-spacing: 2px; }
+    .main-header .sub-title { font-size: 15px; margin-top: 10px; opacity: 0.85; font-weight: 300; }
+
     .control-panel { background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); width: 100%; max-width: 800px; margin-bottom: 20px; box-sizing: border-box; }
     .slider-box { display: flex; align-items: center; gap: 15px; width: 100%; margin-top: 10px; }
     .slider-box input[type="range"] { flex: 1; cursor: pointer; }
@@ -29,6 +35,11 @@
 </style>
 </head>
 <body>
+
+<div class="main-header">
+    <h1>基于CNN的教育专属情感分析与建模</h1>
+    <div class="sub-title">课堂 AI 情感状态时序回放可视化大屏</div>
+</div>
 
 <div class="control-panel">
     <div class="title" style="font-size: 18px; margin-bottom: 10px;">🎛️ 系统控制台 (GitHub Pages 自动化无人值守模式)</div>
